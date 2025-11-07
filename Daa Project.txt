@@ -1,0 +1,69 @@
+# --- Air Traffic Control Simulation (DAA) ---
+# Works inside Google Colab using Matplotlib animation
+
+import math
+import random
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
+# --- Aircraft class ---
+class Aircraft:
+    def _init_(self, aid, x, y, altitude, speed, heading_deg, color):
+        self.id = aid
+        self.x = x
+        self.y = y
+        self.altitude = altitude
+        self.speed = speed
+        self.heading_deg = heading_deg
+        self.color = color
+
+    def update_position(self, dt=1.0):
+        rad = math.radians(self.heading_deg)
+        dx = self.speed * dt * math.sin(rad)
+        dy = self.speed * dt * math.cos(rad)
+        self.x += dx
+        self.y += dy
+
+        # Wrap-around radar edges
+        if self.x > 100: self.x = -100
+        if self.x < -100: self.x = 100
+        if self.y > 100: self.y = -100
+        if self.y < -100: self.y = 100
+
+# --- ATC + DAA System ---
+class TrafficControlSystem:
+    def _init_(self):
+        self.aircraft = []
+        self.separation_distance = 20.0
+        self.separation_altitude = 1000.0
+
+    def add_aircraft(self, ac):
+        self.aircraft.append(ac)
+
+    def detect_conflicts(self):
+        conflicts = []
+        for i in range(len(self.aircraft)):
+            for j in range(i + 1, len(self.aircraft)):
+                a = self.aircraft[i]
+                b = self.aircraft[j]
+                d = math.hypot(a.x - b.x, a.y - b.y)
+                alt_diff = abs(a.altitude - b.altitude)
+                if d < self.separation_distance and alt_diff < self.separation_altitude:
+                    conflicts.append((a, b))
+        return conflicts
+
+    def resolve_conflict(self, a, b):
+        a.heading_deg = (a.heading_deg + 25) % 360
+        b.heading_deg = (b.heading_deg - 25) % 360
+
+    def update(self):
+        for ac in self.aircraft:
+            ac.update_position(0.5)
+        conflicts = self.detect_conflicts()
+        for a, b in conflicts:
+            self.resolve_conflict(a, b)
+        return conflicts
+
+# --- Setup Simulation ---
+tcs = TrafficControlSystem()
+colors = ["red", "cyan"]()
